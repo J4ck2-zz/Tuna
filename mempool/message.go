@@ -10,6 +10,19 @@ import (
 	"strconv"
 )
 
+type PoolLinkMesag struct{
+	Author core.NodeID
+}
+
+func(m *PoolLinkMesag)MsgType()int{
+	return PoolLinkMesagType
+}
+
+func (m *PoolLinkMesag) Module() string {
+	return "link"
+}
+
+
 type Payload struct {
 	Proposer  core.NodeID
 	Batch     pool.Batch
@@ -208,7 +221,7 @@ func (msg *LoopBackMempoolMsg) Module() string {
 }
 
 const (
-	OwnPayloadType int = iota + 17
+	OwnPayloadType int = iota + 18
 	OtherPayloadType
 	RequestPayloadType
 	MakeBlockType
@@ -218,6 +231,7 @@ const (
 	SyncCleanUpBlockType
 	LoopBackMempoolType
 	ReplyPayloadRequestType
+	PoolLinkMesagType
 )
 
 var DefaultMessageTypeMap = map[int]reflect.Type{
@@ -231,4 +245,5 @@ var DefaultMessageTypeMap = map[int]reflect.Type{
 	SyncCleanUpBlockType: reflect.TypeOf(SyncCleanUpBlockMsg{}),
 	LoopBackMempoolType:  reflect.TypeOf(LoopBackMempoolMsg{}),
 	ReplyPayloadRequestType: reflect.TypeOf(ReplyPayloadRequestMsg{}),
+	PoolLinkMesagType:reflect.TypeOf(PoolLinkMesag{}),
 }

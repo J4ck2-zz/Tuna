@@ -15,6 +15,8 @@ type Parameters struct {
 	MaxPayloadNum       int    `json:"Max_Payload_Num"`
 	RequestPloadDelay   int    `json:"Requst_Pload_delay"`
 	MaxMempoolQueenSize uint64 `json:"maxmempoolqueensize"`
+	StartProposer       int    `json:"start_proposer"`
+	EndProposer         int    `json:"end_proposer"`
 }
 
 var DefaultParameters = Parameters{
@@ -24,12 +26,14 @@ var DefaultParameters = Parameters{
 	DDos:                false,
 	Faults:              0,
 	RetryDelay:          5_000,
-	DelayProposal:       1_000,
-	JudgeDelay:          100,
+	DelayProposal:       2_00,
+	JudgeDelay:          600,
 	PayloadDelay:        50,
 	MaxPayloadNum:       15,
-	RequestPloadDelay:   100,
+	RequestPloadDelay:   10_000,
 	MaxMempoolQueenSize: 10_000,
+	StartProposer: 0,
+	EndProposer: 2,
 }
 
 type NodeID int

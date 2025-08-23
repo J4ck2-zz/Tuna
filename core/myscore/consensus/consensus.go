@@ -57,6 +57,7 @@ func Consensus(
 
 	//Step 2: Waiting for all nodes to be online
 	logger.Info.Println("Waiting for all nodes to be online...")
+	time.Sleep(time.Millisecond * time.Duration(parameters.SyncTimeout))
 	wg := sync.WaitGroup{}
 	addrs := committee.BroadCast(id)
 	for _, addr := range addrs {
@@ -66,7 +67,7 @@ func Consensus(
 			for {
 				conn, err := net.Dial("tcp", address)
 				if err != nil {
-					time.Sleep(time.Millisecond * 10)
+					time.Sleep(time.Millisecond * 200)
 					continue
 				}
 				conn.Close()
@@ -75,11 +76,11 @@ func Consensus(
 		}(addr)
 	}
 	wg.Wait()
-	time.Sleep(time.Millisecond * time.Duration(parameters.SyncTimeout))
-	txpool.Run()
+	
+	//txpool.Run()
 	//Step 3: start protocol
 	corer := NewCore(id, committee, parameters, txpool, transmitor, store, sigService, commitChannel, mempoolbackchannel, connectChannel, mempool)
-
+	go mempool.Run()
 	go corer.Run()
 
 	return nil

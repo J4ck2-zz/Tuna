@@ -86,6 +86,8 @@ class NodeParameters:
             inputs += [json['consensus']['payload_delay_send']]
             inputs += [json['consensus']['Max_Payload_Num']]
             inputs += [json['consensus']['Requst_Pload_delay']]
+            inputs += [json['consensus']['start_proposer']]
+            inputs += [json['consensus']['end_proposer']]
             inputs += [json['pool']['tx_size']]
             inputs += [json['pool']['max_queue_size']]
         except KeyError as e:
@@ -119,11 +121,16 @@ class BenchParameters:
             batch_szie = batch_szie if isinstance(batch_szie, list) else [batch_szie]
             if not batch_szie:
                 raise ConfigError('Missing batch_size')
+            
+            rate = json['rate']
+            rate =rate if isinstance(rate,list) else [rate]
+            if not rate:
+                raise ConfigError('Missing rate')
 
             self.nodes = [int(x) for x in nodes]
             self.log_level = int(json['log_level'])
-            self.rate = int(json['rate'])
-            self.batch_szie = [int(x) for x in batch_szie]
+            self.rate = [int(x) for x in rate]
+            self.batch_szie = int(json['batch_size'])
             self.duration = int(json['duration'])
             self.runs = int(json['runs']) if 'runs' in json else 1
             self.node_instance = int(json['node_instance']) if 'node_instance' in json else 1

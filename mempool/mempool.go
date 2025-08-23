@@ -224,7 +224,7 @@ func (m *Mempool) handleReplyPayloadMsg(msg *ReplyPayloadRequestMsg) error {
 			return err
 		}
 		m.Queue[payload.Hash()] = struct{}{}
-		logger.Info.Printf("receive batch %d author%d from %d\n", payload.Batch.ID, payload.Proposer, msg.Author)
+		logger.Info.Printf("receive batch %d author %d from %d\n", payload.Batch.ID, payload.Proposer, msg.Author)
 	}
 	return nil
 }
@@ -301,17 +301,21 @@ func (m *Mempool) generatePayload() {
 	for batch := range batchChannal {
 		payload, _ := NewPload(m.Name, batch, m.SigService)
 		if payload.Batch.ID != -1 {
-			logger.Info.Printf("create Block node %d batch_id %d \n", payload.Proposer, payload.Batch.ID)
+			logger.Info.Printf("create payload node %d batch_id %d \n", payload.Proposer, payload.Batch.ID)
 			ownmessage := &OwnPayloadMsg{
 				Payload: payload,
 			}
 			m.Transimtor.MempoolChannel() <- ownmessage
 		}
-		if m.TxPool.Parameters.Rate > 9000 {
-			time.Sleep(100 * time.Millisecond)
-		}
 	}
 
+}
+
+func (m *Mempool) toLink() {
+	msg := &PoolLinkMesag{
+		Author: m.Name,
+	}
+	m.Transimtor.MempoolSend(m.Name, core.NONE, msg)
 }
 
 func (m *Mempool) Run() {
@@ -320,6 +324,10 @@ func (m *Mempool) Run() {
 		logger.Debug.Printf("Node %d is faulty\n", m.Name)
 		return
 	}
+	m.toLink()
+	logger.Info.Println("Waiting for mempool port link...")
+	time.Sleep(time.Millisecond * time.Duration(m.Parameters.SyncTimeout))
+	logger.Info.Printf("node %d mempool run start \n", m.Name)
 	go m.generatePayload()
 
 	go m.Sync.Run()

@@ -121,7 +121,7 @@ func NewCore(
 	}
 
 	corer.retriever = NewRetriever(nodeID, store, transmitor, sigService, parameters, loopBackChannel, loopDigest, corer.localDAG)
-	corer.commitor = NewCommitor(corer.localDAG, store, commitChannel, startABA, connectChannel, notifypload, sMVBAStart)
+	corer.commitor = NewCommitor(corer.localDAG, store, commitChannel, startABA, connectChannel, notifypload, sMVBAStart, parameters)
 
 	return corer
 }
@@ -254,23 +254,37 @@ func (corer *Core) generatorBlock(round int) *Block {
 		}
 		corer.connectChannel <- msg
 		payloads := <-referencechan
+		var nil bool
+		if len(payloads) == 1 {
+			payload, _ := GetPayload(corer.store, payloads[0])
+			if payload.Batch.ID == -1 {
+				nil = true
+			} else {
+				nil = false
+			}
+		} else {
+			nil = false
+		}
 		if round == 0 {
 			block = &Block{
 				Author:    corer.nodeID,
 				Round:     round,
 				PayLoads:  payloads,
 				Reference: make(map[crypto.Digest]core.NodeID),
+				Nil:       nil,
 				TimeStamp: time.Now().Unix(),
 			}
 		} else {
-			reference := corer.localDAG.GetRoundReceivedBlocks(round - 1)
-			if len(reference) >= corer.committee.HightThreshold() {
+			//reference := corer.localDAG.GetRoundReceivedBlocks(round - 1)
+			reference := corer.localDAG.GetRoundFplusOneReceivedBlocks(round - 1)
+			if len(reference) >= corer.committee.LowThreshold() {
 				block = &Block{
 					Author:    corer.nodeID,
 					Round:     round,
 					PayLoads:  payloads,
-					Reference: reference,
-					//Reference: make(map[crypto.Digest]core.NodeID),
+					//Reference: reference,
+					Reference: make(map[crypto.Digest]core.NodeID),
+					Nil:       nil,
 					TimeStamp: time.Now().Unix(),
 				}
 			}
@@ -328,6 +342,13 @@ func (corer *Core) handlePropose(propose *ProposeMsg) error {
 }
 
 func (corer *Core) checkPayloads(block *Block) mempool.VerifyStatus {
+	if block.Nil {
+		return mempool.OK
+	}
+	if block.Author < core.NodeID(corer.parameters.StartProposer) || block.Author > core.NodeID(corer.parameters.EndProposer) {
+		logger.Debug.Printf("not proposer,dont need payload")
+		return mempool.OK
+	}
 	msg := &mempool.VerifyBlockMsg{
 		Proposer:           block.Author,
 		Epoch:              int64(block.Round),
@@ -539,12 +560,7 @@ func (corer *Core) receivePatternCallback(back *ABABack) error {
 		corer.localDAG.muDAG.RLock()
 		var digest crypto.Digest
 		slot := corer.localDAG.localDAG[back.ExRound][back.Slot]
-		if slot == nil {
-			digest = crypto.Digest{}
-		} else {
-			digest = slot[0]
-		}
-
+		digest = slot
 		corer.localDAG.muDAG.RUnlock()
 		corer.commitor.notifycommit <- &commitMsg{
 			round:  back.ExRound,
@@ -563,20 +579,18 @@ func (corer *Core) handleOutPut(round int, node core.NodeID, digest crypto.Diges
 	corer.localDAG.ReceiveBlock(round, node, digest, references)
 	// try judge
 	corer.commitor.NotifyToJudge()
-	if n := corer.localDAG.GetRoundReceivedBlockNums(round); n >= corer.committee.HightThreshold() {
+	_, flag1 := corer.localDAG.GetReceivedBlock(round, core.NodeID(corer.parameters.StartProposer))
+	_, flag2 := corer.localDAG.GetReceivedBlock(round, core.NodeID(corer.parameters.EndProposer))
+	if n := corer.localDAG.GetRoundReceivedBlockNums(round); n == corer.committee.HightThreshold() && !(flag1 && flag2) {
 
+		//timeout
+		time.AfterFunc(time.Duration(corer.parameters.DelayProposal)*time.Millisecond, func() {
+			corer.delayRoundCh <- round + 1
+		})
+		return nil
+	} else if n >= corer.committee.HightThreshold() && flag1 && flag2 {
 		return corer.advancedround(round + 1)
 	}
-
-	// if n := corer.localDAG.GetRoundReceivedBlockNums(round); n == corer.committee.HightThreshold() {
-	// 	//timeout
-	// 	time.AfterFunc(time.Duration(corer.parameters.DelayProposal)*time.Millisecond, func() {
-	// 		corer.delayRoundCh <- round + 1
-	// 	})
-	// 	return nil
-	// } else if n == corer.committee.Size() {
-	// 	return corer.advancedround(round + 1)
-	// }
 
 	return nil
 }
@@ -588,12 +602,12 @@ func (corer *Core) advancedround(round int) error {
 		if propose, err := NewProposeMsg(corer.nodeID, round, block, corer.sigService); err != nil {
 			return err
 		} else {
-			// time.AfterFunc(time.Duration(corer.parameters.NetwrokDelay)*time.Millisecond, func() {
-			// 	corer.transmitor.Send(corer.nodeID, core.NONE, propose)
-			// 	corer.transmitor.RecvChannel() <- propose
-			// })
-			corer.transmitor.Send(corer.nodeID, core.NONE, propose)
-			corer.transmitor.RecvChannel() <- propose
+			time.AfterFunc(time.Duration(corer.parameters.NetwrokDelay)*time.Millisecond, func() {
+				corer.transmitor.Send(corer.nodeID, core.NONE, propose)
+				corer.transmitor.RecvChannel() <- propose
+			})
+			// corer.transmitor.Send(corer.nodeID, core.NONE, propose)
+			// corer.transmitor.RecvChannel() <- propose
 		}
 	}
 
@@ -606,37 +620,37 @@ func (corer *Core) sMVBARun() {
 		var err error
 		switch msg.MsgType() {
 		case SPBProposalType:
-			start := time.Now()
+			
 			err = corer.handleSpbProposal(msg.(*SPBProposal))
-			logger.Error.Printf("handleSpbProposal took %v", time.Since(start))
+			
 		case SPBVoteType:
-			start := time.Now()
+			
 			err = corer.handleSpbVote(msg.(*SPBVote))
-			logger.Error.Printf("handleSpbvote took %v", time.Since(start))
+			
 		case FinishType:
-			start := time.Now()
+			
 			err = corer.handleFinish(msg.(*Finish))
-			logger.Error.Printf("handleFinish took %v", time.Since(start))
+			
 		case DoneType:
-			start := time.Now()
+			
 			err = corer.handleDone(msg.(*Done))
-			logger.Error.Printf("handleDone took %v", time.Since(start))
+			
 		case ElectShareType:
-			start := time.Now()
+			
 			err = corer.handleElectShare(msg.(*ElectShare))
-			logger.Error.Printf("handleElectshare took %v", time.Since(start))
+			
 		case PrevoteType:
-			start := time.Now()
+			
 			err = corer.handlePrevote(msg.(*Prevote))
-			logger.Error.Printf("handlePrevote took %v", time.Since(start))
+		
 		case FinVoteType:
-			start := time.Now()
+			
 			err = corer.handleFinvote(msg.(*FinVote))
-			logger.Error.Printf("handleFinvote took %v", time.Since(start))
+			
 		case HaltType:
-			start := time.Now()
+			
 			err = corer.handleHalt(msg.(*Halt))
-			logger.Error.Printf("handleHalt took %v", time.Since(start))
+			
 		}
 		if err != nil {
 			logger.Warn.Println(err)
@@ -645,10 +659,22 @@ func (corer *Core) sMVBARun() {
 
 }
 
+func (corer *Core) toLink() {
+	msg := &LinkMesag{
+		Author: corer.nodeID,
+	}
+	corer.transmitor.Send(corer.nodeID, core.NONE, msg)
+}
+
 func (corer *Core) Run() {
 	if corer.nodeID >= core.NodeID(corer.parameters.Faults) {
+		corer.toLink()
+		logger.Info.Println("Waiting for consensus port link...")
+		time.Sleep(time.Millisecond * time.Duration(corer.parameters.SyncTimeout))
+		logger.Info.Printf("node %d core run start \n", corer.nodeID)
+		corer.txpool.Run()
 		//启动mempool
-		go corer.MemPool.Run()
+		//go corer.MemPool.Run()
 		//first propose
 		go corer.sMVBARun()
 		block := corer.generatorBlock(0)

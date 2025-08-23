@@ -4,6 +4,7 @@
 /benchmark/db-2
 /benchmark/db-3
 /benchmark/logs
+/benchmark/results
 /benchmark/.committee.json
 /benchmark/.node-key-0.json
 /benchmark/.node-key-1.json

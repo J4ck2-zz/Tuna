@@ -247,11 +247,13 @@ class Bench:
         progress = progress_bar(hosts, prefix='Downloading logs:')
         for i, host in enumerate(progress):
             c = Connection(host, user='root', connect_kwargs=self.connect)
+            # if i==0:
+            #     c.get(PathMaker.node_log_debug_file(i*node_instance,ts), local=PathMaker.node_log_debug_file(i*node_instance,ts))
             for j in range(node_instance):
                 c.get(PathMaker.node_log_info_file(i*node_instance+j,ts), local=PathMaker.node_log_info_file(i*node_instance+j,ts))
-                c.get(PathMaker.node_log_debug_file(i*node_instance+j,ts), local=PathMaker.node_log_debug_file(i*node_instance+j,ts))
-                c.get(PathMaker.node_log_error_file(i*node_instance+j,ts), local=PathMaker.node_log_error_file(i*node_instance+j,ts))
-                c.get(PathMaker.node_log_warn_file(i*node_instance+j,ts), local=PathMaker.node_log_warn_file(i*node_instance+j,ts))
+                # c.get(PathMaker.node_log_debug_file(i*node_instance+j,ts), local=PathMaker.node_log_debug_file(i*node_instance+j,ts))
+                #c.get(PathMaker.node_log_error_file(i*node_instance+j,ts), local=PathMaker.node_log_error_file(i*node_instance+j,ts))
+                # c.get(PathMaker.node_log_warn_file(i*node_instance+j,ts), local=PathMaker.node_log_warn_file(i*node_instance+j,ts))
 
         # Parse logs and return the parser.
         Print.info('Parsing logs and computing performance...')
@@ -264,11 +266,13 @@ class Bench:
         progress = progress_bar(hosts, prefix='Downloading logs:')
         for i, host in enumerate(progress):
             c = Connection(host, user='root', connect_kwargs=self.connect)
+            # if i==0:
+            #     c.get(PathMaker.node_log_debug_file(i*node_instance,ts), local=PathMaker.node_log_debug_file(i*node_instance,ts))
             for j in range(node_instance):
                 c.get(PathMaker.node_log_info_file(i*node_instance+j,ts), local=PathMaker.node_log_info_file(i*node_instance+j,ts))
-                c.get(PathMaker.node_log_debug_file(i*node_instance+j,ts), local=PathMaker.node_log_debug_file(i*node_instance+j,ts))
-                c.get(PathMaker.node_log_error_file(i*node_instance+j,ts), local=PathMaker.node_log_error_file(i*node_instance+j,ts))
-                c.get(PathMaker.node_log_warn_file(i*node_instance+j,ts), local=PathMaker.node_log_warn_file(i*node_instance+j,ts))
+                # c.get(PathMaker.node_log_debug_file(i*node_instance+j,ts), local=PathMaker.node_log_debug_file(i*node_instance+j,ts))
+                #c.get(PathMaker.node_log_error_file(i*node_instance+j,ts), local=PathMaker.node_log_error_file(i*node_instance+j,ts))
+                # c.get(PathMaker.node_log_warn_file(i*node_instance+j,ts), local=PathMaker.node_log_warn_file(i*node_instance+j,ts))
 
         # Parse logs and return the parser.
         Print.info('Parsing logs and computing performance...')
@@ -310,12 +314,12 @@ class Bench:
                 e = FabricError(e) if isinstance(e, GroupException) else e
                 Print.error(BenchError('Failed to configure nodes', e))
 
-            for batch_size in bench_parameters.batch_szie:
-                Print.heading(f'\nRunning {n}/{bench_parameters.node_instance} nodes (batch size: {batch_size:,})')
+            for rate in bench_parameters.rate:
+                Print.heading(f'\nRunning {n}/{bench_parameters.node_instance} nodes (inpput rate: {rate:,})')
                 hosts = selected_hosts[:n]
 
-                node_parameters.json['pool']['rate'] = bench_parameters.rate
-                node_parameters.json['pool']['batch_size'] = batch_size
+                node_parameters.json['pool']['rate'] = rate
+                node_parameters.json['pool']['batch_size'] = bench_parameters.batch_szie
                 self.ts = datetime.now().strftime(r"%Y-%m-%d-%H-%M-%S")
                 
                 #Step a: only upload parameters files.
@@ -338,7 +342,7 @@ class Bench:
                         )
                         self._logs(hosts, node_parameters.faults , protocol, ddos,bench_parameters,self.ts).print(
                             PathMaker.result_file(
-                                n, bench_parameters.rate, node_parameters.tx_size,batch_size , node_parameters.faults,self.ts
+                                n, rate, node_parameters.tx_size,bench_parameters.batch_szie, node_parameters.faults,self.ts
                         ))
                     except (subprocess.SubprocessError, GroupException, ParseError) as e:
                         self.kill(hosts=hosts)

@@ -121,23 +121,20 @@ func (sync *Synchronizer) Run() {
 						ReqId:   reqid,
 					}
 					//找作者要相关的区块
-					if reqid >1000{
+					if reqid > 1000 {
 						time.AfterFunc(time.Duration(sync.Parameters.RequestPloadDelay*5)*time.Millisecond, func() {
 							sync.VerifyAgain(req.Author, message)
 						})
-					}else if reqid > 500 {
-						time.AfterFunc(time.Duration(sync.Parameters.RequestPloadDelay*2)*time.Millisecond, func() {
+					} else if reqid > 500 {
+						time.AfterFunc(time.Duration(sync.Parameters.RequestPloadDelay*3)*time.Millisecond, func() {
 							sync.VerifyAgain(req.Author, message)
 						})
-					} else if reqid > 200 {
+					} else {
 						// logger.Debug.Printf("create payload request reqid %d to %d \n", reqid, req.Author)
 						time.AfterFunc(time.Duration(sync.Parameters.RequestPloadDelay)*time.Millisecond, func() {
 							sync.VerifyAgain(req.Author, message)
 						})
-					} else {
-						sync.Transimtor.MempoolSend(sync.Name, req.Author, message)
-						logger.Debug.Printf("send payload request reqid %d to %d \n", reqid, req.Author)
-					}
+					} 
 					reqid++
 					//找所有人要
 					//sync.Transimtor.Send(sync.Name, core.NONE, message)

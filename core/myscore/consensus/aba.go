@@ -1,8 +1,8 @@
 package consensus
 
 import (
-	"WuKong/logger"
 	"WuKong/core"
+	"WuKong/logger"
 	"sync"
 	"sync/atomic"
 )
@@ -65,15 +65,6 @@ func NewABA(c *Core, ExRound int, Slot core.NodeID, abaCallBack chan *ABABack) *
 	}
 }
 
-func (aba *ABA) isUsed(val *ABAVal, used map[int]map[core.NodeID]struct{}) bool {
-	item, ok := used[val.InRound]
-	if !ok {
-		return false
-	}
-	_, ok = item[val.Author]
-	return ok
-
-}
 
 func (aba *ABA) ProcessABAVal(val *ABAVal) {
 	if aba.halt.Load() {
@@ -87,7 +78,7 @@ func (aba *ABA) ProcessABAVal(val *ABAVal) {
 			aba.initYesCnt++
 			yescnt := aba.initYesCnt
 			aba.initMutex.Unlock()
-			if yescnt == aba.c.committee.Size() {
+			if yescnt == aba.c.committee.HightThreshold() {
 				logger.Debug.Printf("fastpath aba round %d Slot %d flag %d\n", val.Round, val.Slot, FLAG_YES)
 				halt, _ := NewABAHalt(aba.c.nodeID, aba.ExRound, aba.Slot, val.InRound, FLAG_YES, aba.c.sigService)
 				aba.c.transmitor.Send(aba.c.nodeID, core.NONE, halt)
@@ -100,7 +91,7 @@ func (aba *ABA) ProcessABAVal(val *ABAVal) {
 			aba.initNoCnt++
 			nocnt := aba.initNoCnt
 			aba.initMutex.Unlock()
-			if nocnt == aba.c.committee.Size() {
+			if nocnt == aba.c.committee.HightThreshold() {
 				logger.Debug.Printf("fastpath aba round %d Slot %d flag %d\n", val.Round, val.Slot, FLAG_NO)
 				halt, _ := NewABAHalt(aba.c.nodeID, aba.ExRound, aba.Slot, val.InRound, FLAG_NO, aba.c.sigService)
 				aba.c.transmitor.Send(aba.c.nodeID, core.NONE, halt)
@@ -111,7 +102,6 @@ func (aba *ABA) ProcessABAVal(val *ABAVal) {
 	}
 
 	if val.Flag == FLAG_NO {
-		if !aba.isUsed(val, aba.noUsed) {
 			aba.valNoCnt[val.InRound]++
 			cnt = aba.valNoCnt[val.InRound]
 			flags, ok := aba.noUsed[val.InRound]
@@ -123,9 +113,8 @@ func (aba *ABA) ProcessABAVal(val *ABAVal) {
 			if !ok {
 				flags[val.Slot] = struct{}{}
 			}
-		}
-	} else if val.Flag == FLAG_YES {
-		if !aba.isUsed(val, aba.yesUsed) {
+		
+	} else if val.Flag == FLAG_YES {	
 			aba.valYesCnt[val.InRound]++
 			cnt = aba.valYesCnt[val.InRound]
 			flags, ok := aba.yesUsed[val.InRound]
@@ -137,10 +126,9 @@ func (aba *ABA) ProcessABAVal(val *ABAVal) {
 			if !ok {
 				flags[val.Slot] = struct{}{}
 			}
-		}
+		
 	}
 	aba.valMutex.Unlock()
-
 	if cnt == aba.c.committee.LowThreshold() {
 		aba.abaCallBack <- &ABABack{
 			Typ:     ABA_INVOKE,

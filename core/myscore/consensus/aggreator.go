@@ -97,7 +97,7 @@ func (a *Aggreator) AddFinishVote(finish *Finish) (bool, error) {
 		return item.Append(a.committee, finish)
 	} else {
 		item = NewFinishAggreator()
-		items[finish.Round] = NewFinishAggreator()
+		items[finish.Round] = item
 		return item.Append(a.committee, finish)
 	}
 }

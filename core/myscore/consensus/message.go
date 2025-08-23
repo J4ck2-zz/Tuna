@@ -24,11 +24,24 @@ const (
 	VOTE_FLAG_NO
 )
 
+type LinkMesag struct {
+	Author core.NodeID
+}
+
+func (m *LinkMesag) MsgType() int {
+	return LinkMesagType
+}
+
+func (m *LinkMesag) Module() string {
+	return "link"
+}
+
 type Block struct {
 	Author    core.NodeID
 	Round     int
 	PayLoads  []crypto.Digest
 	Reference map[crypto.Digest]core.NodeID
+	Nil       bool
 	TimeStamp int64
 }
 
@@ -890,6 +903,7 @@ const (
 	PrevoteType
 	FinVoteType
 	HaltType
+	LinkMesagType
 )
 
 var DefaultMsgTypes = map[int]reflect.Type{
@@ -911,4 +925,5 @@ var DefaultMsgTypes = map[int]reflect.Type{
 	PrevoteType:     reflect.TypeOf(Prevote{}),
 	FinVoteType:     reflect.TypeOf(FinVote{}),
 	HaltType:        reflect.TypeOf(Halt{}),
+	LinkMesagType:   reflect.TypeOf(LinkMesag{}),
 }

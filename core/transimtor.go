@@ -59,6 +59,8 @@ func NewTransmitor(
 			case "sMVBA":
 				tr.smvbaCh <- msg
 				logger.Warn.Printf(" smvbaCh 长度：%d", len(tr.smvbaCh))
+			default:
+				logger.Warn.Printf("Unknown module %s", msg.Module())
 			}
 		}
 	}()
