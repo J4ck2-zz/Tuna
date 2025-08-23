@@ -17,7 +17,7 @@ def local(ctx):
         'rate': 1000,                  # tx send rate
         'batch_size': 1024,              # the max number of tx that can be hold 
         'log_level': 0b1111,            # 0x1 infolevel 0x2 debuglevel 0x4 warnlevel 0x8 errorlevel
-        'protocol_name': "mysbasedDAG"
+        'protocol_name': "Tuna"
     }
     node_params = {
         "pool": {
@@ -121,7 +121,7 @@ def remote(ctx):
         'rate': [10000],                                                  # tx send rate
         'batch_size': 1024,                              # the max number of tx that can be hold 
         'log_level': 0b1111,                                            # 0x1 infolevel 0x2 debuglevel 0x4 warnlevel 0x8 errorlevel
-        'protocol_name': "mysBasedBft",
+        'protocol_name': "Tuna",
         'runs': 1
     }
     node_params = {

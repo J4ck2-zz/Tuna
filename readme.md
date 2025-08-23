@@ -34,7 +34,7 @@ This command may take a long time the first time you run it (compiling golang co
  SUMMARY:
 -----------------------------------------
  + CONFIG:
- Protocol: Wukong 
+ Protocol: Tuna
  DDOS attack: False 
  Committee size: 4 nodes
  Input rate: 3,000 tx/s
@@ -81,7 +81,7 @@ The file [settings.json](https://github.com/asonnino/hotstuff/blob/main/benchmar
 ```json
 {
     "key": {
-        "name": "wuKong",
+        "name": "Tuna",
         "path": "/root/.ssh/id_rsa",
         "accesskey": "/root/.aliyun/access.json"
     },
